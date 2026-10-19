@@ -3,7 +3,7 @@
 Third-person 3D. You are the king in the world, over his shoulder. You give standing orders to your brigade commander; he runs the squads and reports back.
 
 ## Open it
-1. Install **Unity 6 LTS (6000.0.x)** with Unity Hub, plus the **Mac Build Support** module (Apple silicon is fine). The project says 6000.0.23f1. Any 6000.0.x works; let the Hub upgrade it if asked.
+1. Install **Unity 6.3 LTS (6000.3.26f1)** with Unity Hub, plus the **Mac Build Support** module (Apple silicon is fine). The project says 6000.3.26f1. Any later 6000.3.x works; let the Hub upgrade it if asked.
 2. Unity Hub > **Add > Add project from disk** > pick this `Oathmarch` folder. The first import takes a minute or two.
 3. Press **Play** in any scene, even the empty default one. A runtime bootstrap (`GameRoot.AutoBootstrap`) builds the whole slice.
 4. Optional: **Oathmarch > Build Slice Scene** saves `Assets/Scenes/Slice.unity` and adds it to Build Settings.
