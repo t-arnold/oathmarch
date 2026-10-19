@@ -51,7 +51,7 @@ for name,(rx,ry,ext) in SEG.items():
     h,t,_ = B[name]; h=Vector(h); t=Vector(t); d=(t-h); L=d.length
     bpy.ops.mesh.primitive_cylinder_add(vertices=10, radius=1, depth=1)
     o = bpy.context.active_object
-    o.scale = (rx, ry, L/2 + ext)
+    o.scale = (rx, ry, L/2 + ext + min(rx, ry) * 0.6)
     o.rotation_mode='QUATERNION'; o.rotation_quaternion = Vector((0,0,1)).rotation_difference(d.normalized())
     o.location = (h+t)/2
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
@@ -141,3 +141,12 @@ bpy.ops.export_scene.fbx(filepath=out, use_selection=True, object_types={'ARMATU
     apply_unit_scale=True, apply_scale_options='FBX_SCALE_UNITS', axis_forward='-Z', axis_up='Y',
     primary_bone_axis='Y', secondary_bone_axis='X', armature_nodetype='NULL', mesh_smooth_type='FACE')
 print("EXPORTED", out)
+def foot_speed(act_name, length):
+    arm.animation_data.action = bpy.data.actions[act_name]
+    ys=[]
+    for f in range(1, length+2):
+        scene.frame_set(f)
+        ys.append((arm.matrix_world @ arm.pose.bones["LeftFoot"].head).y)
+    rng = max(ys)-min(ys); T = length/30.0
+    print("STRIDE", act_name, "range", round(rng,3), "speed", round(rng/(T/2),3))
+foot_speed("Walk",30); foot_speed("Run",20)

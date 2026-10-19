@@ -55,7 +55,7 @@ namespace Oathmarch.Brain
             var p = new Place { Id = Places.Count, Name = name, Kind = kind, Owner = owner, Center = c, Radius = radius };
             float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
             void B(BuildingKind k, V2 pos, float sx, float sz, float h) =>
-                p.Buildings.Add(new Building { Kind = k, Pos = pos, SizeX = sx, SizeZ = sz, Height = h, Yaw = R(-25, 25) });
+                p.Buildings.Add(new Building { Kind = k, Index = p.Buildings.Count, Pos = pos, SizeX = sx, SizeZ = sz, Height = h, Yaw = R(-25, 25) });
 
             if (kind == PlaceKind.Fort)
             {
@@ -65,7 +65,7 @@ namespace Oathmarch.Brain
                 {
                     double a = i * Math.PI / 4;
                     var pos = c + new V2((float)Math.Cos(a) * 9, (float)Math.Sin(a) * 9);
-                    p.Buildings.Add(new Building { Kind = BuildingKind.Palisade, Pos = pos, SizeX = 7.5f, SizeZ = 0.6f, Height = 3, Yaw = (float)(-a * 180 / Math.PI) + 90 });
+                    p.Buildings.Add(new Building { Kind = BuildingKind.Palisade, Index = p.Buildings.Count, Pos = pos, SizeX = 7.5f, SizeZ = 0.6f, Height = 3, Yaw = (float)(-a * 180 / Math.PI) + 90 });
                 }
             }
             else

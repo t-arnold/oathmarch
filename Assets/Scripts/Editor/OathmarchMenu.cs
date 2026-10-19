@@ -37,6 +37,7 @@ namespace Oathmarch.EditorTools
             mi.animationType = ModelImporterAnimationType.Human;
             mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
             mi.SaveAndReimport();
+            AnimatorBuilder.Build();
             var av = AssetDatabase.LoadAllAssetsAtPath(p).OfType<Avatar>().FirstOrDefault();
             Debug.Log(av != null && av.isHuman && av.isValid ? "[Oathmarch] Mannequin avatar is a valid Humanoid." : "[Oathmarch] Avatar is NOT valid; open Rig > Configure to fix the bone mapping.");
         }

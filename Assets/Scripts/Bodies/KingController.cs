@@ -15,7 +15,8 @@ namespace Oathmarch.Bodies
         {
             base.Awake(); IsKing = true;
             cc = GetComponent<CharacterController>();
-            maxHp = hp = 150; damage = 20; attackRange = 2.1f; attackCooldown = 0.7f; walkSpeed = 2.6f; runSpeed = 6f; vision = 24f;
+            maxHp = hp = 150; damage = 20; attackRange = 2.1f; attackCooldown = 0.7f;
+            walkSpeed = CharacterAnimator.WalkNatural; runSpeed = 4.2f; vision = 26f; turnSpeed = 720f;
         }
 
         protected override void Update()
@@ -30,12 +31,15 @@ namespace Oathmarch.Bodies
             bool sprint = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             float speed = (sprint ? runSpeed : walkSpeed) * input.magnitude;
             if (anim.IsAttacking) speed *= 0.3f;
-            planar = Vector3.MoveTowards(planar, input.normalized * speed, 25f * Time.deltaTime);
+            planar = Vector3.MoveTowards(planar, input.sqrMagnitude > 1e-4f ? input.normalized * speed : Vector3.zero, 14f * Time.deltaTime);
             if (input.sqrMagnitude > 0.01f) Face(transform.position + input);
 
             vy = cc.isGrounded ? -1f : vy - 20f * Time.deltaTime;
+            Vector3 before = transform.position;
             cc.Move((planar + Vector3.up * vy) * Time.deltaTime);
-            anim.SetSpeed(new Vector3(planar.x, 0, planar.z).magnitude);
+            // animate by the distance actually covered (walls stop the feet too)
+            Vector3 moved = transform.position - before; moved.y = 0;
+            anim.SetSpeed(Time.deltaTime > 0 ? moved.magnitude / Time.deltaTime : 0);
 
             if (!uiOpen && Input.GetMouseButtonDown(0) && cooldown <= 0 && !anim.IsAttacking && Cursor.lockState == CursorLockMode.Locked)
             {
@@ -58,7 +62,7 @@ namespace Oathmarch.Bodies
         protected override void Die()
         {
             base.Die();
-            CommandUI.Instance?.Log("The king has fallen. (Press R to restart the slice.)");
+            GameRoot.Instance?.Log.Add(Time.time, "The king has fallen. Press R to begin again.");
         }
     }
 }

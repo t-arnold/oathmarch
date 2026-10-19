@@ -27,6 +27,8 @@ namespace Oathmarch.Brain
     public sealed class Building
     {
         public BuildingKind Kind;
+        public int Index;       // index inside its place
+        public bool Burned;
         public V2 Pos;          // world position (x,z)
         public float SizeX, SizeZ, Height, Yaw;
         public string Label => Kind switch
@@ -76,6 +78,31 @@ namespace Oathmarch.Brain
         public bool Alive;
     }
 
+    public enum EventKind { Hit, Kill, Torched, Spawned, Despawned }
+
+    /// <summary>Something a body actually did. Reports are built only from these.</summary>
+    public struct BrainEvent
+    {
+        public EventKind Kind;
+        public float Time;
+        public int ActorId, ActorSquad; public Faction ActorFaction;
+        public int VictimId, VictimSquad; public Faction VictimFaction;
+        public V2 Pos;
+        public int PlaceId, BuildingIndex;
+    }
+
+    public enum RequestKind { Spawn, Despawn }
+
+    /// <summary>What the brain asks the bodies layer to do (it never creates GameObjects itself).</summary>
+    public struct BodyRequest
+    {
+        public RequestKind Kind;
+        public int SquadId;
+        public int Count;
+        public V2 Pos;
+        public List<int> UnitIds;
+    }
+
     public sealed class Report
     {
         public float Time;
@@ -87,8 +114,10 @@ namespace Oathmarch.Brain
     {
         public readonly List<Report> Entries = new List<Report>();
         public event Action<Report> Added;
+        public int Count => Entries.Count;
         public void Add(float time, string text)
         {
+            if (string.IsNullOrWhiteSpace(text)) return;
             var r = new Report(time, text);
             Entries.Add(r);
             if (Entries.Count > 60) Entries.RemoveAt(0);

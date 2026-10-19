@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Headless test of the pure-C# command brain. Unity ignores this folder (outside Assets). Run: dotnet run -c Release -->
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><LangVersion>9.0</LangVersion><Nullable>disable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Scripts/Brain/*.cs" />
+    <Compile Include="*.cs" />
+  </ItemGroup>
+</Project>

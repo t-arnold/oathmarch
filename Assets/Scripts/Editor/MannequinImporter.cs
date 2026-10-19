@@ -5,24 +5,28 @@ using UnityEngine;
 namespace Oathmarch.EditorTools
 {
     /// <summary>
-    /// Imports the shared character model(s) as Humanoid, with in-place loops for idle/walk/run.
-    /// Applies to any model under a folder named "Characters" (drop your own pack's FBX there to get the same treatment).
+    /// Imports any FBX under a folder named "Characters" as Humanoid (avatar created from the model,
+    /// auto-mapped; the mannequin's bones use Unity's humanoid names), with Idle/Walk/Run looping and
+    /// every clip in place (root motion baked into the pose). After import it validates the avatar and
+    /// shouts in the Console if it is not a valid humanoid.
     /// </summary>
     public class MannequinImporter : AssetPostprocessor
     {
-        static bool Applies(string path) => path.Replace('\\', '/').Contains("/Characters/") && path.ToLowerInvariant().EndsWith(".fbx");
+        public override uint GetVersion() => 3;   // bump to force a reimport with new settings
+
+        public static bool Applies(string path) => path.Replace('\\', '/').Contains("/Characters/") && path.ToLowerInvariant().EndsWith(".fbx");
 
         void OnPreprocessModel()
         {
             if (!Applies(assetPath)) return;
             var mi = (ModelImporter)assetImporter;
-            if (mi.animationType != ModelImporterAnimationType.Human)
-            {
-                mi.animationType = ModelImporterAnimationType.Human;
-                mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
-            }
+            mi.animationType = ModelImporterAnimationType.Human;
+            mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            mi.autoGenerateAvatarMappingIfUnspecified = true;
             mi.importAnimation = true;
+            mi.optimizeGameObjects = false;          // keep bone transforms so outfit parts can attach to them
             mi.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+            mi.animationCompression = ModelImporterAnimationCompression.KeyframeReduction;
         }
 
         void OnPreprocessAnimation()
@@ -37,12 +41,25 @@ namespace Oathmarch.EditorTools
                 c.name = shortName;
                 bool loop = shortName == "Idle" || shortName == "Walk" || shortName == "Run";
                 c.loopTime = loop; c.loopPose = loop;
-                // everything in place: root motion baked into the pose
                 c.lockRootRotation = true; c.keepOriginalOrientation = true;
-                c.lockRootHeightY = true; c.keepOriginalPositionY = true;
+                c.lockRootHeightY = true; c.keepOriginalPositionY = true; c.heightFromFeet = false;
                 c.lockRootPositionXZ = true; c.keepOriginalPositionXZ = true;
             }
             mi.clipAnimations = clips;
+        }
+
+        void OnPostprocessModel(GameObject g)
+        {
+            if (!Applies(assetPath)) return;
+            EditorApplication.delayCall += () => Validate(assetPath);
+        }
+
+        public static bool Validate(string path)
+        {
+            var av = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Avatar>().FirstOrDefault();
+            bool ok = av != null && av.isValid && av.isHuman;
+            if (!ok) Debug.LogError($"[Oathmarch] {path}: avatar is NOT a valid Humanoid. Select it > Rig > Configure and fix the mapping (Hips, Spine, Chest, Neck, Head, Left/Right UpperArm/LowerArm/Hand, UpperLeg/LowerLeg/Foot).");
+            return ok;
         }
     }
 }

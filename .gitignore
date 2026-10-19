@@ -29,3 +29,8 @@
 .DS_Store
 crashlytics-buildtype.txt
 sysinfo.txt
+
+# keep the headless brain test project
+!Tests/**/*.csproj
+Tests/**/bin/
+Tests/**/obj/

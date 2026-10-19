@@ -5,32 +5,40 @@ namespace Oathmarch.Bodies
 {
     /// <summary>
     /// Builds every person from ONE shared humanoid model + ONE animation set.
-    /// To use your own pack: put a Humanoid-rigged model at Resources/Characters/ (or assign
-    /// overrideModel on GameRoot) and optionally a different humanoid clip set; the outfit is applied on top.
+    /// To use your own pack: drop a Humanoid-rigged model in a folder named Characters (or assign
+    /// GameRoot.characterModel); the shared clips retarget onto it and the outfit is applied on top.
     /// </summary>
     public static class CharacterFactory
     {
-        public const string ModelPath = "Characters/Mannequin";
-        static GameObject model; static Avatar avatar;
+        public const string ModelPath = "Characters/Mannequin", ControllerPath = "Characters/Locomotion";
+        static GameObject model; static Avatar avatar; static RuntimeAnimatorController controller;
         static AnimationClip idle, walk, run, attack, death;
         static bool loaded;
 
-        public static GameObject OverrideModel;     // optional: a humanoid prefab/model from your pack
-        public static Avatar OverrideAvatar;
+        public static GameObject OverrideModel;
+        public static bool AvatarValid { get; private set; }
+        public static bool HasController => controller != null;
+        public static string ClipSummary { get; private set; } = "";
 
-        static void Load()
+        public static void Load()
         {
             if (loaded) return; loaded = true;
-            model = OverrideModel != null ? OverrideModel : Resources.Load<GameObject>(ModelPath);
             var all = Resources.LoadAll<Object>(ModelPath);
-            avatar = OverrideAvatar != null ? OverrideAvatar : all.OfType<Avatar>().FirstOrDefault();
+            model = OverrideModel != null ? OverrideModel : Resources.Load<GameObject>(ModelPath);
+            avatar = (OverrideModel != null ? OverrideModel.GetComponentInChildren<Animator>()?.avatar : null) ?? all.OfType<Avatar>().FirstOrDefault();
             var clips = all.OfType<AnimationClip>().Where(c => !c.name.StartsWith("__preview")).ToArray();
             AnimationClip Find(string n) => clips.FirstOrDefault(c => c.name == n) ?? clips.FirstOrDefault(c => c.name.EndsWith(n));
             idle = Find("Idle"); walk = Find("Walk"); run = Find("Run"); attack = Find("Attack"); death = Find("Death");
-            if (model == null) Debug.LogError("[Oathmarch] Mannequin model missing at Resources/" + ModelPath);
-            else if (avatar == null || !avatar.isHuman || !avatar.isValid)
-                Debug.LogError("[Oathmarch] Mannequin avatar is not a valid Humanoid. Select Assets/Resources/Characters/Mannequin.fbx > Rig > Animation Type: Humanoid > Apply (or run Oathmarch > Reimport Mannequin As Humanoid).");
-            if (idle == null || walk == null) Debug.LogError("[Oathmarch] Mannequin clips not found (" + string.Join(",", clips.Select(c => c.name)) + ")");
+            controller = Resources.Load<RuntimeAnimatorController>(ControllerPath);
+            AvatarValid = avatar != null && avatar.isValid && avatar.isHuman;
+            ClipSummary = string.Join(", ", clips.Select(c => $"{c.name}{(c.isLooping ? "(loop)" : "")}"));
+
+            if (model == null) Debug.LogError("[Oathmarch] Mannequin model missing at Assets/Resources/" + ModelPath + ".fbx");
+            if (!AvatarValid)
+                Debug.LogError("[Oathmarch] CHARACTER AVATAR IS NOT A VALID HUMANOID -> characters will T-pose. Fix: menu Oathmarch > Reimport Mannequin As Humanoid, or select Mannequin.fbx > Rig > Animation Type: Humanoid > Apply and check Configure is all green.");
+            if (idle == null || walk == null || run == null) Debug.LogError("[Oathmarch] Mannequin clips missing. Found: " + ClipSummary);
+            else if (!idle.isLooping || !walk.isLooping || !run.isLooping) Debug.LogWarning("[Oathmarch] Idle/Walk/Run are not flagged Loop Time in the import settings (" + ClipSummary + "). Run Oathmarch > Reimport Mannequin As Humanoid.");
+            if (controller == null) Debug.LogWarning("[Oathmarch] Locomotion.controller not found in Resources/Characters; using the Playables fallback. Run Oathmarch > Rebuild Animator Controller.");
         }
 
         public static GameObject Spawn(string name, Vector3 pos, Quaternion rot, OutfitKind outfit, bool king = false)
@@ -43,14 +51,14 @@ namespace Oathmarch.Bodies
             visual.transform.SetParent(root.transform, false);
             visual.transform.localPosition = model != null ? Vector3.zero : Vector3.up;
             visual.transform.localRotation = Quaternion.identity;
-            foreach (var c in visual.GetComponentsInChildren<Collider>()) Object.Destroy(c);
+            foreach (var c in visual.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(c);
 
             var animator = visual.GetComponent<Animator>() ?? visual.AddComponent<Animator>();
             animator.avatar = avatar;
-            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-            var ca = visual.AddComponent<CharacterAnimator>();
-            ca.Init(idle, walk, run, attack, death);
+            // outfit parts are placed in the bind pose, so apply BEFORE any animation is evaluated
             visual.AddComponent<Outfit>().Apply(outfit);
+            var ca = visual.AddComponent<CharacterAnimator>();
+            ca.Init(AvatarValid ? controller : null, idle, walk, run, attack, death);
 
             if (king)
             {
@@ -66,10 +74,6 @@ namespace Oathmarch.Bodies
             return root;
         }
 
-        /// <summary>Unit/King components look up the CharacterAnimator on Awake, so add them after Spawn via this helper.</summary>
-        public static T AddBody<T>(GameObject root) where T : Unit
-        {
-            return root.AddComponent<T>();
-        }
+        public static T AddBody<T>(GameObject root) where T : Unit => root.AddComponent<T>();
     }
 }
